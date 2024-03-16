@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'url';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { access, mkdir, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 
 const create = async () => {
@@ -10,19 +10,28 @@ const create = async () => {
     const fileContent = 'I am fresh and young';
 
     // Проверяем существование папки
-    if (!existsSync(folderPath)) {
-        mkdirSync(folderPath);
+    try {
+        await access(folderPath);
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            await mkdir(folderPath, { recursive: true });
+        } else {
+            throw error;
+        }
     }
 
-    // Проверяем существование файла
-    if (existsSync(filePath)) {
+    try {
+        await access(filePath); // Проверяем существование файла
         throw new Error('FS operation failed: File already exists');
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            // Файл не существует, создаем его
+            await writeFile(filePath, fileContent);
+            console.log('Файл fresh.txt успешно создан с содержимым: "I am fresh and young"');
+        } else {
+            throw error;
+        }
     }
-
-    // Создаем новый файл и записываем в него содержимое
-    writeFileSync(filePath, fileContent);
-
-    console.log('fresh.txt успешно создан с содержимым "I am fresh and young"');
 };
 
 await create();
